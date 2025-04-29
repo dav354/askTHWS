@@ -70,6 +70,7 @@ class ThwsSpider(CrawlSpider):
 
         self.stats_server = StatsHTTPServer(self.reporter)
         self.stats_server.start()
+        self.logger.info(f"Stats HTTP server running on port {self.stats_server.port}")
 
         if get_setting(self.settings, "ENABLE_FILE_LOGGING", True, bool):
             fh = RotatingFileHandler(

@@ -1,3 +1,6 @@
 langchain
 tqdm
 langdetect
+SQLAlchemy
+psycopg2-binary
+Flask

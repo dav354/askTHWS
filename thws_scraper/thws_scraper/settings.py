@@ -84,7 +84,7 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 ITEM_PIPELINES = {
-    "thws_scraper.pipelines.RawOutputPipeline": 100,
+    "thws_scraper.pipelines.ORMPostgresPipeline": 100,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

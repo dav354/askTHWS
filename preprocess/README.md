@@ -5,9 +5,9 @@
 To build the container, run:
 
 ```shell
- docker build -t chunker .
- docker tag ghcr.io/dav534/chunker:latest
- docker push ghcr.io/dav534/chunker:latest
+docker build -t chunker .
+docker tag chunker ghcr.io/dav354/chunker:latest
+docker push ghcr.io/dav354/chunker:latest
 ```
 
 # Run the chunker Container

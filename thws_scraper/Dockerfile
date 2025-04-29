@@ -1,5 +1,9 @@
 FROM python:3.11-slim AS builder
 
+LABEL org.opencontainers.image.title="askTHWS"
+LABEL org.opencontainers.image.source="https://github.com/dav354/askthws"
+LABEL org.opencontainers.image.description="Scraper that fetches raw pages and stores them into Postgres."
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y  --no-install-recommends \
@@ -10,7 +14,10 @@ RUN apt-get update && apt-get install -y  --no-install-recommends \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+COPY requirements.txt .
+
+RUN pip install --upgrade pip &&\
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.11-slim
 

@@ -5,9 +5,9 @@
 To build the container, run:
 
 ```shell
- docker build -t embedding .
- docker tag ghcr.io/dav534/embedding:latest
- docker push ghcr.io/dav534/embedding:latest
+docker build -t embedding .
+docker tag embedding ghcr.io/dav354/embedding:latest
+docker push ghcr.io/dav354/embedding:latest
 ```
 
 # Run the embedding Container

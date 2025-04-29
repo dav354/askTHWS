@@ -8,3 +8,5 @@ langdetect==1.0.9
 langchain==0.3.23
 pandas==2.2.3
 jinja2
+SQLAlchemy
+psycopg2-binary
