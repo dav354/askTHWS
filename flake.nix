@@ -13,6 +13,7 @@
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
         pkgs.python311
+        pkgs.python311Packages.pip
         pkgs.ollama-cuda
         pkgs.commitizen
         pkgs.git-lfs
@@ -36,7 +37,7 @@
 
       shellHook = ''
         # Make libstdc++.so.6 available to the Python venv
-        export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=${pkgs.gcc}/lib:${pkgs.cudaPackages.cudatoolkit}/lib:${pkgs.cudaPackages.cudnn}/lib:$LD_LIBRARY_PATH
 
         # Set up venv once if not already
         if [ ! -d .venv ]; then

@@ -10,17 +10,7 @@ RUN apt-get update && apt-get install -y  --no-install-recommends \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir --prefix=/install \
-    scrapy==2.12.0 \
-    pymupdf==1.25.5 \
-    beautifulsoup4==4.13.4 \
-    readability-lxml==0.8.1 \
-    lxml-html-clean==0.4.2 \
-    icalendar==6.1.3 \
-    langdetect==1.0.9 \
-    langchain==0.3.23 \
-    pandas==2.2.3 \
-    jinja2
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.11-slim
 

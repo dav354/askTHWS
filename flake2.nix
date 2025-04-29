@@ -14,18 +14,12 @@
       config.allowUnfree = true;
     };
 
-    python = pkgs.python311.override {
-      packageOverrides = pyFinal: pyPrev: {
-        torch = pyPrev.torch.override { cudaSupport = true; };
-      };
-    };
-
-    pythonEnv = python.withPackages (ps:
+    pythonEnv = pkgs.python311.withPackages (ps:
       with ps; [
         # Scraper
         scrapy
         pymupdf
-        rich
+        torch-bin
         # compare_scraping_result
         deepdiff
         # Preprocess
@@ -48,7 +42,15 @@
         pkgs.commitizen
         pkgs.black
         pkgs.git-lfs
+        pkgs.jq
+        pkgs.isort
+        pkgs.nvidia-docker
+        pkgs.pre-commit
       ];
+
+      shellHook = ''
+        export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+      '';
     };
   };
 }

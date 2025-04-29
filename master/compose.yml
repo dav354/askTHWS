@@ -1,0 +1,31 @@
+services:
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+# docker-compose excerpt
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: scraper
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: scraperdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  master:
+    image: ghcr.io/dav354/master
+    environment:
+      POSTGRES_URL: postgres:5432
+      QDRANT_URL: qdrant:6333
+      POSTGRES_USER: scraper
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: scraperdb
+
+volumes:
+  qdrant_data:
+  pgdata:

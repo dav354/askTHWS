@@ -84,10 +84,8 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 ITEM_PIPELINES = {
-    "thws_scraper.pipelines.RawOutputPipeline": 100,  # write raw pages first
-    "thws_scraper.pipelines.ChunkingOutputPipeline": 200,  # then split & emit chunks
+    "thws_scraper.pipelines.RawOutputPipeline": 100,
 }
-
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
