@@ -2,14 +2,14 @@
 
 Diese Anleitung zeigt dir, wie du lokal eine isolierte Entwicklungsumgebung aufsetzt – für einheitliches Linting, Testing und Packaging.
 
----
+______________________________________________________________________
 
 ### 🧰 1. Voraussetzungen
 
 - Du brauchst **Python 3.11**
 - Zugriff auf das Terminal (macOS/Linux) oder PowerShell (Windows)
 
----
+______________________________________________________________________
 
 ## 🍎 macOS
 
@@ -20,6 +20,7 @@ brew install python@3.11
 ```
 
 Falls nötig, verlinken:
+
 ```bash
 brew link python@3.11 --force
 ```
@@ -38,7 +39,7 @@ python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
----
+______________________________________________________________________
 
 ## 🐧 Linux (Ubuntu/Debian)
 
@@ -63,15 +64,15 @@ python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
----
+______________________________________________________________________
 
 ## 🪟 Windows
 
 ### ✅ Python 3.11 installieren
 
 1. Lade Python 3.11 von [python.org](https://www.python.org/downloads/release/python-3110/)
-2. Beim Installieren: **„Add Python to PATH“ aktivieren**
-3. Installiere mit allen optionalen Features (inkl. `pip`)
+1. Beim Installieren: **„Add Python to PATH“ aktivieren**
+1. Installiere mit allen optionalen Features (inkl. `pip`)
 
 ### 🛠 Virtuelle Umgebung einrichten
 

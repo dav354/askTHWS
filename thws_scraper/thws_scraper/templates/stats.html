@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Stats</title>
+    <meta http-equiv="refresh" content="5">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        tr:hover { background-color: #e6f7ff; }
+    </style>
+</head>
+<body>
+    <h1>Live Crawler Stats</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Domain</th>
+                <th>HTML</th>
+                <th>PDF</th>
+                <th>iCal</th>
+                <th>Errors</th>
+                <th>Empty</th>
+                <th>Ignored</th>
+                <th>Bytes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.domain }}</td>
+                <td>{{ row.html }}</td>
+                <td>{{ row.pdf }}</td>
+                <td>{{ row.ical }}</td>
+                <td>{{ row.errors }}</td>
+                <td>{{ row.empty }}</td>
+                <td>{{ row.ignored }}</td>
+                <td>{{ row.bytes }}</td>
+            </tr>
+            {% endfor %}
+            <tr style="font-weight:bold;">
+                <td>SUMMARY</td>
+                <td>{{ summary.html }}</td>
+                <td>{{ summary.pdf }}</td>
+                <td>{{ summary.ical }}</td>
+                <td>{{ summary.errors }}</td>
+                <td>{{ summary.empty }}</td>
+                <td>{{ summary.ignored }}</td>
+                <td>{{ summary.bytes }}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

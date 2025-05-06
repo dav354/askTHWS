@@ -3,10 +3,12 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-from scrapy import signals
+from urllib.parse import urlparse
 
 # useful for handling different item types with a single interface
-from itemadapter import is_item, ItemAdapter
+from scrapy import signals
+from scrapy.downloadermiddlewares.robotstxt import RobotsTxtMiddleware
+from twisted.internet.error import DNSLookupError
 
 
 class ThwsScraperSpiderMiddleware:
@@ -101,3 +103,50 @@ class ThwsScraperDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+
+class ThwsErrorMiddleware:
+    """
+    Catch downloader errors (DNS, timeouts, etc.), log and count them,
+    then swallow so the crawl continues.
+    """
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls()
+
+    def process_exception(self, request, exception, spider):
+        domain = urlparse(request.url).netloc
+
+        if isinstance(exception, DNSLookupError):
+            spider.logger.warning(f"[DNS] Could not resolve {request.url}")
+        else:
+            spider.logger.error(f"{request.url} failed: {exception!r}")
+
+        if hasattr(spider, "reporter"):
+            spider.reporter.bump("errors", domain)
+
+            try:
+                spider.update_rich_table()
+            except Exception:
+                pass
+
+        return None
+
+
+class RobotsBypassMiddleware(RobotsTxtMiddleware):
+    """
+    Bypass robots.txt only for certain subpaths like /fileadmin/.
+    All other rules from robots.txt are still respected.
+    """
+
+    def process_request(self, request, spider):
+        parsed = urlparse(request.url)
+
+        # Allow /fileadmin/ paths unconditionally
+        if parsed.path.startswith("/fileadmin/"):
+            spider.logger.debug(f"Bypassing robots.txt for: {request.url}")
+            return None  # skip the rest of this middleware
+
+        # otherwise fall back to the normal robots.txt logic
+        return super().process_request(request, spider)

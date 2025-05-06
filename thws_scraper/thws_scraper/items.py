@@ -6,7 +6,29 @@
 import scrapy
 
 
-class ThwsScraperItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class RawPageItem(scrapy.Item):
+    """The full text + metadata for one fetched page or PDF."""
+
+    url = scrapy.Field()
+    type = scrapy.Field()  # "html" | "pdf" | "ical"
+    title = scrapy.Field()
+    text = scrapy.Field()
+    date_scraped = scrapy.Field()
+    date_updated = scrapy.Field()
+    status = scrapy.Field()
+    lang = scrapy.Field()
+    parse_error = scrapy.Field()
+    db_id = scrapy.Field()
+
+
+class DocumentChunkItem(scrapy.Item):
+    """One deduped chunk of a RawPageItem, ready for embedding."""
+
+    chunk_id = scrapy.Field()
+    text = scrapy.Field()
+    source_url = scrapy.Field()
+    title = scrapy.Field()
+    date_updated = scrapy.Field()
+    lang = scrapy.Field()
+    embedding = scrapy.Field()
+    kg_triples = scrapy.Field()

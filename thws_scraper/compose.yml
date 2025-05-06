@@ -1,0 +1,49 @@
+services:
+  thws_scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scraper
+    restart: "no"
+    environment:
+      LOG_LEVEL: INFO
+      EXPORT_CSV_STATS: False
+      ENABLE_FILE_LOGGING: False
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    env_file: .env
+    ports:
+      - 7000:7000
+    volumes:
+      - ./result:/app/result
+    depends_on:
+      - postgres
+    networks:
+      - askthws_net
+
+  postgres:
+    image: postgres:17
+    restart: always
+    container_name: postgres
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - askthws_net
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - 5001:8080
+    networks:
+      - askthws_net
+
+volumes:
+  pgdata:
+
+networks:
+  askthws_net:

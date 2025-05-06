@@ -1,10 +1,10 @@
 # scraper
 scrapy==2.12.0
 pymupdf==1.25.5
-rich==14.0.0
-# compare_scraping_result
-tabulate==0.9.0
-deepdiff==8.4.2
+beautifulsoup4==4.13.4
+readability-lxml==0.8.1
+lxml-html-clean==0.4.2
+icalendar==6.1.3
 # Preprocess
 langdetect==1.0.9
 langchain==0.3.23
@@ -21,6 +21,10 @@ torchaudio==2.5.1+cu121
 # dev tools
 black==25.1.0
 commitizen==4.4.1
+isort==5.13.2
+flake8==7.2.0
+pre-commit==4.0.1
+jinja2
 # Api server
 fastapi==0.115.12
 uvicorn==0.34.0

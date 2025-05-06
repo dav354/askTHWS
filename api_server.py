@@ -1,16 +1,17 @@
-import torch
+import atexit
+import os
+import signal
+import subprocess
 import time
+import warnings
+
+import requests
+import torch
+import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
-import requests
-import uvicorn
-import warnings
-import subprocess
-import atexit
-import os
-import signal
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

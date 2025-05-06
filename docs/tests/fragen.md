@@ -52,7 +52,7 @@
 
 - Gibt es Unisport?
 
-### Anmeldung/Einschreibung 
+### Anmeldung/Einschreibung
 
 - Gibt es eine Zulassungsbeschränkung für den Bachelor Cybersecurity?
 

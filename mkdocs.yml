@@ -5,9 +5,9 @@ theme:
 nav:
   - Home: index.md
   - Developer Tools:
-      - Black: dev-tools/black.md
-      - Commitizen: dev-tools/commitizen.md
+      - Precommit Hooks: dev-tools/precommit.md
       - Python: dev-tools/python.md
+      - Jq: dev-tools/jq.md
   - Tests:
       - Erster Test: tests/first_results.md
       - Testfragen: tests/fragen.md

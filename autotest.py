@@ -1,7 +1,8 @@
-import requests
 import re
 import time
 from datetime import datetime
+
+import requests
 
 MARKDOWN_FILE = "docs/tests/fragen.md"
 API_URL = "http://localhost:8000/ask"

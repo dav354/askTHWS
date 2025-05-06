@@ -1,8 +1,9 @@
+import warnings
+
+import requests
 import torch
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
-import requests
-import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

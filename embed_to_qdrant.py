@@ -1,10 +1,11 @@
 import json
-import sys
 import os
+import sys
 import uuid
+
 import torch
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams, PointStruct
+from qdrant_client.http.models import Distance, PointStruct, VectorParams
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
