@@ -70,14 +70,13 @@ async def prepare_and_execute_retrieval(
         top_k=15,
         only_need_context=True
     )
-
+    print("1. Enriching Query...")
     enriched_query = await rag_instance.aquery(user_query,param=params_bypass , system_prompt=QUERY_EXPANSION_PROMPT)
     print("2. Retrieving full context for source mapping...")
 
     context_data_str = await rag_instance.aquery(user_query, param=params_context)
 
-    # --- 1. Generate the Intermediate Answer with Inline Citations ---
-    print("1. Generating intermediate answer with inline citations...")
+    print("3. Generating intermediate answer ...")
     final_system_prompt = RELIABLE_SYSTEM_PROMPT_TEMPLATE.format(
         current_date=datetime.now().strftime("%d. %B %Y"),
         location="Würzburg",
@@ -90,14 +89,7 @@ async def prepare_and_execute_retrieval(
         param=params_bypass,
         system_prompt=final_system_prompt
     )
-    print("   - Intermediate citable answer received.")
 
-    # --- 2. Retrieve the Full Context for Source Lookup ---
-    print("2. Retrieving full context for source mapping...")
-
-    print("   - Raw context data received.")
-
-    print("   - Structured source list created.")
 
     return {
         "answer": citable_answer_text,
