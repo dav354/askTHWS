@@ -1,20 +1,89 @@
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List
-from retrieval import execute_multi_subdomain_retrieval
+# File: api_server.py
+# DEBUGGING VERSION: Hardcoding environment variables to test Neo4j connection.
+
+import time
+import torch
 import subprocess
 import atexit
 import os
 import signal
+import uvicorn
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
+from typing import Dict, Any
+
+from knowledgeMapper.retrieval import prepare_and_execute_retrieval
+
+
+# ==============================================================================
+# TEMPORARY DEBUGGING STEP
+# We are setting the environment variables directly in the code to bypass any
+# potential issues with the .env file.
+#
+
+
+# --- Custom Module Imports (adapted for new local_models.py) ---
+from knowledgeMapper.local_models import (
+    HFEmbedFunc,
+    OllamaLLM,
+    EMBEDDING_MODEL_NAME,
+    OLLAMA_MODEL_NAME,
+
+)
+# Import the updated retrieval logic
+from knowledgeMapper.retrieval import (prepare_and_execute_retrieval, MODE)
+
+# --- LightRAG Library Imports ---
+import lightrag
+from lightrag import LightRAG
+from lightrag.kg.shared_storage import initialize_pipeline_status
+
+# --- Device Info ---
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"🔥 Using device: {device}")
+
+
+# --- Lifespan to load all models and initialize LightRAG ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handles startup events for the FastAPI application."""
+    print("🚀 Server starting up...")
+    print("🧠 Initializing LightRAG framework...")
+    app.state.rag = LightRAG(
+        working_dir="./rag_storage",
+        embedding_func=HFEmbedFunc(),
+        llm_model_func=OllamaLLM(),
+        enable_llm_cache=False,
+    )
+
+    await app.state.rag.initialize_storages()
+    print("✅ LightRAG storages initialized.")
+    await initialize_pipeline_status()
+    print("✅ LightRAG pipeline status initialized.")
+    print("✅ Server is ready to accept requests.")
+    yield
+    print("🔌 Server shutting down.")
+
+
+# --- FastAPI App Initialization ---
+app = FastAPI(
+    title="THWS KG-RAG API (Final Architecture)",
+    description="Ein API-Server, der die stabile `aquery`-Methode mit einem intelligenten Prompt für maximale Antwortqualität und Transparenz verwendet.",
+    version="18.0.3_debug",  # Version bumped for debug
+    lifespan=lifespan
+)
+
+
+class Question(BaseModel):
+    query: str
+
 
 # --- Ollama Background Server Management ---
 print("🚓 Starting Ollama server in the background...")
 ollama_process = subprocess.Popen(
-    ["ollama", "serve"],
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
-    preexec_fn=os.setsid if os.name != "nt" else None,
+    ["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    preexec_fn=os.setsid if os.name != 'nt' else None
 )
 
 
@@ -24,7 +93,7 @@ def shutdown_ollama():
     print("Shutting down Ollama server...")
     if ollama_process:
         try:
-            if os.name == "nt":
+            if os.name == 'nt':
                 ollama_process.terminate()
             else:
                 os.killpg(os.getpgid(ollama_process.pid), signal.SIGTERM)
@@ -34,45 +103,64 @@ def shutdown_ollama():
             print(f"Could not stop Ollama server gracefully: {e}")
 
 
-# --- FastAPI App Initialization ---
-app = FastAPI(
-    title="Hybrid RAG API",
-    description="API for querying multiple subdomain databases with a shared knowledge graph.",
-    version="20.0.0",
-)
-
-
-class QueryRequest(BaseModel):
-    query: str
-    # Example: ["www_thws_de", "fwi_fhws_de"]
-    subdomains: List[str]
-
-
+# --- API Endpoints ---
 @app.post("/ask")
-async def ask(data: QueryRequest):
+async def ask(data: Question, request: Request):
     """
-    Performs a RAG query against one or more subdomains.
-    The first subdomain in the list is treated as primary.
+    Implements a controlled query pipeline by delegating to the retrieval module.
     """
+    start_time = time.time()
+    print(f"\n--- New Request ---")
+    print(f"Received German query: '{data.query}'")
     try:
-        result = await execute_multi_subdomain_retrieval(
-            user_query=data.query, subdomains=data.subdomains
-        )
-        return result
-    except ValueError as e:
-        # This catches errors from rag_manager if a DB is not found
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        import traceback
+        rag: LightRAG = request.app.state.rag
+        # Instantiate the LLM for this request. It's a lightweight wrapper.
+        llm_instance = OllamaLLM()
 
+        # Delegate the entire logic to the retrieval function
+        final_answer = await prepare_and_execute_retrieval(
+            user_query=data.query,
+            rag_instance=rag,
+        )
+
+        duration = round(time.time() - start_time, 2)
+        print(f"--- Request completed in {duration} seconds. ---")
+
+        return {
+            "question": data.query,
+            "answer": final_answer,
+            "mode": "controlled_aquery_pipeline",
+            "duration_seconds": duration,
+        }
+    except Exception as e:
+        print(f"ERROR: An unexpected error occurred: {e}")
+        import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error. Details: {e}")
 
 
 @app.get("/")
-def root():
-    return {"message": "Hybrid RAG API is running."}
+def read_root():
+    """Root endpoint providing basic information about the API."""
+    return {"message": "Welcome to the THWS KG-RAG API (Final Architecture)."}
 
 
+@app.get("/metadata")
+def metadata(request: Request):
+    """Provides metadata about the running service."""
+    rag: LightRAG = request.app.state.rag
+    retriever_info = rag.vector_storage
+
+
+    return {
+        "embedding_model": EMBEDDING_MODEL_NAME,
+        "llm_model": OLLAMA_MODEL_NAME,
+        "device": device,
+        "retrieval_mode": MODE,
+    }
+
+
+# --- Run FastAPI Server ---
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("Starting FastAPI server...")
+    uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=False)
