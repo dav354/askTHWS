@@ -8,7 +8,15 @@ from typing import List, Dict, Any, Union
 from lightrag import LightRAG
 from lightrag.base import QueryParam
 
-MODE = "mix"
+
+"""Specifies the retrieval mode:
+- "local": Focuses on context-dependent information.
+- "global": Utilizes global knowledge.
+- "hybrid": Combines local and global retrieval methods.
+- "naive": Performs a basic search without advanced techniques.
+- "mix": Integrates knowledge graph and vector retrieval.
+"""
+MODE = "naive"
 
 # This prompt correctly instructs the model to create traceable inline citations.
 RELIABLE_SYSTEM_PROMPT_TEMPLATE = """
