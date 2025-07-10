@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import config
 import rag_manager
-from retrieval import prepare_and_execute_retrieval
+from retrieval import get_rag_response
 from utils.local_models import OllamaLLM, embedding_func
 
 # --- Device Info ---
@@ -82,7 +82,7 @@ async def ask(data: Question, request: Request):
     print(f"Received German query: '{data.query}'")
     try:
         # Delegate the entire logic to the retrieval function
-        final_answer = await prepare_and_execute_retrieval(
+        final_answer = await get_rag_response(
             user_query=data.query,
         )
 

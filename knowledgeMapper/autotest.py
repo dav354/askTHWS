@@ -91,14 +91,12 @@ def save_result(f, question: str, duration: float, api_response: Dict[str, Any],
 
         f.write(f"**Antwort:**\n```\n{clean_answer_text}\n```\n\n")
 
-        f.write("#### 🔗 Quellen (Top 5 Links):\n")  # <--- Changed header
-        # --- MODIFICATION START ---
-        # Parse the raw_sources_str (which is now a list of URLs) and format as a Markdown list
+        f.write("#### 🔗 Quellen (Top 7 Links):\n")
         if raw_sources_str:
             try:
                 source_links = raw_sources_str  # raw_sources_str is already a list of URLs
                 if isinstance(source_links, list):
-                    for i, link in enumerate(source_links[:5]):  # Take only the top 5
+                    for i, link in enumerate(source_links[:7]):  # Take only the top 7
                         f.write(f"- <{link}>\n")
                 else:
                     f.write("- Ungültiges Quellenformat.\n")
@@ -106,7 +104,6 @@ def save_result(f, question: str, duration: float, api_response: Dict[str, Any],
                 f.write(f"- Fehler beim Parsen der Quellen: {e}\n")
         else:
             f.write("- Keine Kontextdaten vom API erhalten.\n")
-        # --- MODIFICATION END ---
     else:
         error_type = api_response.get("error", "Unknown Error")
         error_detail = api_response.get("detail", "An unknown error occurred on the server side.")
