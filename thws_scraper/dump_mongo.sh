@@ -3,8 +3,11 @@
 set -euo pipefail
 
 DB_NAME="askthws_scraper"
-MONGO_CONTAINER_NAME="mongodb"
-ENV_FILE=".env"
+MONGO_CONTAINER_NAME="mongodb-atlas-local"
+
+# MongoDB credentials from knowledgeMapper/config.py and docker-compose.yml
+MONGO_USER="scraper"
+MONGO_PASS="password"
 
 COLOR_OFF='\033[0m'
 COLOR_RED='\033[0;31m'
@@ -28,17 +31,6 @@ log_message() {
 
   echo -e " [${color}${level}${COLOR_OFF}] ${message}"
 }
-
-source "$ENV_FILE"
-
-if [ -z "${MONGO_USER}" ]; then
-  log_message ERROR "MONGO_USER is not set. Please define it in '$ENV_FILE' or as an environment variable."
-  exit 1
-fi
-if [ -z "${MONGO_PASS}" ]; then
-  log_message ERROR "MONGO_PASS is not set. Please define it in '$ENV_FILE' or as an environment variable."
-  exit 1
-fi
 
 TIMESTAMP_FILE=$(date +%Y%m%d_%H%M%S)
 OUTPUT_FILE_NAME="${DB_NAME}_backup_${TIMESTAMP_FILE}.gz"

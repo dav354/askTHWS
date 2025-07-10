@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
 
 import requests
+import subprocess
 
 MARKDOWN_FILE = "../docs/tests/fragen.md"
 API_URL = "http://localhost:8000/ask"
@@ -54,18 +55,21 @@ def get_metadata():
 
 def write_header(f, metadata):
     """Writes the header for the results file."""
-    commit_hash = metadata.get("git_commit", "unknown")
+    try:
+        commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
+    except:
+        commit_hash = "unknown"
+    
     embedding_model = metadata.get("embedding_model", "unknown")
     llm_model = metadata.get("llm_model", "unknown")
     device = metadata.get("device", "unknown")
-    retrieval_mode = metadata.get("retrieval_mode", "unknown")
 
-    f.write(f"Commit: {commit_hash}\n\n")
+    f.write(f"Commit: <https://github.com/dav354/rag.git/commit/{commit_hash}>\n\n")
     f.write("# Automatischer Testlauf\n\n")
     f.write(f"- **Embedding-Modell**: `{embedding_model}`\n")
     f.write(f"- **LLM-Modell**: `{llm_model}`\n")
     f.write(f"- **Device**: `{device}`\n\n")
-    f.write(f"- **Retrieval-Mode**: `{retrieval_mode}`\n\n")
+    
     f.write("> Antworten aus dem ersten Lauf, keine manuelle Anpassung.\n\n")
     f.write("---\n")
 
@@ -87,11 +91,19 @@ def save_result(f, question: str, duration: float, api_response: Dict[str, Any],
 
         f.write(f"**Antwort:**\n```\n{clean_answer_text}\n```\n\n")
 
-        f.write("#### 🔗 Quellen (Raw Context String):\n")  # <--- Changed header
+        f.write("#### 🔗 Quellen (Top 5 Links):\n")  # <--- Changed header
         # --- MODIFICATION START ---
-        # Directly append the raw_sources_str as a code block
+        # Parse the raw_sources_str (which is now a list of URLs) and format as a Markdown list
         if raw_sources_str:
-            f.write(raw_sources_str)
+            try:
+                source_links = raw_sources_str  # raw_sources_str is already a list of URLs
+                if isinstance(source_links, list):
+                    for i, link in enumerate(source_links[:5]):  # Take only the top 5
+                        f.write(f"- <{link}>\n")
+                else:
+                    f.write("- Ungültiges Quellenformat.\n")
+            except Exception as e:
+                f.write(f"- Fehler beim Parsen der Quellen: {e}\n")
         else:
             f.write("- Keine Kontextdaten vom API erhalten.\n")
         # --- MODIFICATION END ---

@@ -47,12 +47,15 @@ async def prepare_and_execute_retrieval(
 
     print("2. Retrieving relevant documents from vector store...")
     # Add the 'await' keyword here
-    retrieved_documents = await vector_store.similarity_search(query_embedding, k=7)
+    retrieved_documents = await vector_store.similarity_search(query_embedding, k=5)
 
     # Now, 'retrieved_documents' will be a list, and you can iterate over it.
     context_data_str = ""
+    source_links = []
     for doc in retrieved_documents:
         context_data_str += doc.get("page_content", "")
+        if "url" in doc.get("metadata", {}):
+            source_links.append(doc["metadata"]["url"])
 
     print("3. Generating answer...")
     llm = OllamaLLM()
@@ -65,4 +68,4 @@ async def prepare_and_execute_retrieval(
 
     citable_answer_text = await llm(prompt=final_system_prompt)
 
-    return {"answer": citable_answer_text, "sources": context_data_str}
+    return {"answer": citable_answer_text, "sources": source_links}
