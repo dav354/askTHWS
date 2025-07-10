@@ -17,7 +17,9 @@ class ThwsRescrapeSpider(ThwsSpider):
                     self.logger.info(f"Loaded {len(urls)} rescrape URLs from {rescrape_path}")
                     self.start_urls = urls
                 else:
-                    self.logger.warning(f"No URLs found in {rescrape_path}, using default start_urls.")
+                    self.logger.warning(
+                        f"No URLs found in {rescrape_path}, using default start_urls."
+                    )
         else:
             self.logger.warning(f"{rescrape_path} does not exist, using default start_urls.")
 

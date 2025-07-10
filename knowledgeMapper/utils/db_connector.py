@@ -1,12 +1,12 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from gridfs.async_io import AsyncIOMotorGridFSBucket
-from .. import config
+import config
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 
 _mongo_client = None
 
+
 async def get_db_connection():
     """
-    Establishes and returns a connection to the MongoDB database.
+    Establishes and returns an async connection to MongoDB.
     Uses a singleton pattern for the client to ensure connection pooling.
     """
     global _mongo_client
@@ -18,7 +18,7 @@ async def get_db_connection():
             password=config.MONGO_PASS,
             authSource="admin",
             authMechanism="SCRAM-SHA-1",
-            directConnection=True
+            directConnection=True,
         )
     db = _mongo_client[config.MONGO_DB_NAME]
     fs = AsyncIOMotorGridFSBucket(db)

@@ -59,7 +59,11 @@ def parse_pdf(response: Response, tz: ZoneInfo) -> Optional[RawPageItem]:
                     "event_type": "pdf_processing_error",
                     "url": response.url,
                     "error_details": str(e),
-                    "traceback": (logging.Formatter().formatException(logging.sys.exc_info()) if logging.sys else str(e)),
+                    "traceback": (
+                        logging.Formatter().formatException(logging.sys.exc_info())
+                        if logging.sys
+                        else str(e)
+                    ),
                 },
             )
 

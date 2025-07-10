@@ -1,10 +1,17 @@
+import asyncio
+import concurrent.futures
+import logging
 import os
 import sys
-import logging
-import concurrent.futures
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
-from .db_connector import get_db_connection
+import config
+from langchain.docstore.document import Document
+from utils.data_processor import init_worker, process_document_content
+from utils.db_connector import get_db_connection
+
+log = logging.getLogger(__name__)
+
 
 async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
     """
@@ -33,7 +40,11 @@ async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
     if config.LANGUAGE != "all":
         pdf_filter = {"source_metadata.lang": config.LANGUAGE}
 
-    for doc_data in extracted_collection.find(pdf_filter):
+    cursor = extracted_collection.find(pdf_filter)
+    # --- THIS IS THE FIX ---
+    # Use 'async for' to iterate over the async cursor
+    async for doc_data in cursor:
+        # ----------------------
         metadata = doc_data.get("source_metadata", {})
         metadata["url"] = doc_data.get("source_url")
         doc = Document(page_content=doc_data.get("extracted_text", ""), metadata=metadata)
@@ -44,9 +55,9 @@ async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
 
     # --- 2. Load Raw HTML and iCal for Processing ---
     log.info("Fetching raw HTML and iCal documents...")
-    html_docs_raw = list(db[config.MONGO_PAGES_COLLECTION].find(lang_filter))
+    html_docs_raw = await db[config.MONGO_PAGES_COLLECTION].find(lang_filter).to_list(length=None)
     ical_filter = {"type": "ical", **lang_filter}
-    ical_docs_raw = list(db[config.MONGO_FILES_COLLECTION].find(ical_filter))
+    ical_docs_raw = await db[config.MONGO_FILES_COLLECTION].find(ical_filter).to_list(length=None)
 
     docs_to_process_live = []
     for doc in html_docs_raw:
@@ -62,9 +73,13 @@ async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
             }
         )
     for doc in ical_docs_raw:
-        ical_bytes = (
-            fs.get(doc["gridfs_id"]).read() if doc.get("gridfs_id") else doc.get("file_content")
-        )
+        ical_bytes = None
+        if doc.get("gridfs_id"):
+            gridfs_file = await fs.get(doc["gridfs_id"])
+            ical_bytes = await gridfs_file.read()
+        elif doc.get("file_content"):
+            ical_bytes = doc.get("file_content")
+
         if ical_bytes:
             docs_to_process_live.append(
                 {
@@ -77,7 +92,9 @@ async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
                     },
                 }
             )
-    client.close()
+
+    # The client is a singleton, so we don't close it here.
+    # It will be closed when the application exits.
 
     # --- 3. Process Raw Docs in Parallel ---
     if docs_to_process_live:
@@ -85,7 +102,13 @@ async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=os.cpu_count(), initializer=init_worker
         ) as executor:
-            live_results = executor.map(process_document_content, docs_to_process_live)
+            loop = asyncio.get_event_loop()
+            tasks = [
+                loop.run_in_executor(executor, process_document_content, doc)
+                for doc in docs_to_process_live
+            ]
+            live_results = await asyncio.gather(*tasks)
+
             processed_live_docs = [doc for doc in live_results if doc is not None]
             final_docs.extend(processed_live_docs)
             stats["live_processed"] = len(processed_live_docs)  # Record the count

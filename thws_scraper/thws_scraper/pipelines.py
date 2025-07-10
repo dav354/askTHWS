@@ -132,7 +132,11 @@ class MongoPipeline:
                     "event_type": "mongodb_unexpected_setup_error",
                     "pipeline_class": self.__class__.__name__,
                     "error": str(e),
-                    "traceback": (logging.Formatter().formatException(logging.sys.exc_info()) if logging.sys else str(e)),
+                    "traceback": (
+                        logging.Formatter().formatException(logging.sys.exc_info())
+                        if logging.sys
+                        else str(e)
+                    ),
                 },
             )
             self.client = None
@@ -221,8 +225,12 @@ class MongoPipeline:
                             "original_title": item_dict.get("title"),
                             "lang": item_dict.get("lang"),
                         }
-                        gridfs_id_generated = self.fs.put(original_file_content, filename=url, metadata=file_metadata_for_gridfs)
-                        item_dict["gridfs_id"] = gridfs_id_generated  # Store ObjectId as is, mongo driver handles it
+                        gridfs_id_generated = self.fs.put(
+                            original_file_content, filename=url, metadata=file_metadata_for_gridfs
+                        )
+                        item_dict["gridfs_id"] = (
+                            gridfs_id_generated  # Store ObjectId as is, mongo driver handles it
+                        )
                         spider.logger.info(  # Changed from debug for better visibility of large file storage # noqa 501
                             "MongoPipeline: Stored large file in GridFS",
                             extra={
@@ -293,7 +301,9 @@ class MongoPipeline:
                 }
                 if gridfs_id_generated:
                     log_extras_upsert["gridfs_id_ref"] = str(gridfs_id_generated)
-                spider.logger.debug("MongoPipeline: Upserted item into MongoDB", extra=log_extras_upsert)
+                spider.logger.debug(
+                    "MongoPipeline: Upserted item into MongoDB", extra=log_extras_upsert
+                )
             except OperationFailure as e:
                 error_extra = {
                     "event_type": "mongodb_upsert_operation_failure",
@@ -306,7 +316,9 @@ class MongoPipeline:
                 if "document too large" in str(e).lower():
                     error_extra["reason"] = "document_too_large"
                     error_extra["approx_item_dict_str_len"] = len(str(item_dict))
-                spider.logger.error("MongoPipeline: MongoDB operation failure during upsert", extra=error_extra)
+                spider.logger.error(
+                    "MongoPipeline: MongoDB operation failure during upsert", extra=error_extra
+                )
                 raise DropItem(f"MongoDB operation failed for {url}: {e}")
             except Exception as e:  # Catch any other unexpected errors during upsert
                 spider.logger.error(
@@ -318,7 +330,11 @@ class MongoPipeline:
                         "item_type": item_type,
                         "collection": collection_name,
                         "error": str(e),
-                        "traceback": (logging.Formatter().formatException(logging.sys.exc_info()) if logging.sys else str(e)),
+                        "traceback": (
+                            logging.Formatter().formatException(logging.sys.exc_info())
+                            if logging.sys
+                            else str(e)
+                        ),
                     },
                 )
                 raise DropItem(f"Unexpected error for {url}: {e}")

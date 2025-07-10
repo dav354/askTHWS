@@ -79,7 +79,10 @@ SOFT_ERROR_STRINGS = [
     "404",
     "sorry, there is no translation for this news-article.",
     "studierende melden sich mit ihrer k-nummer als benutzername am e-learning system an.",
-    ("falls sie die seitenadresse manuell in ihren browser eingegeben haben," "kontrollieren sie bitte die korrekte schreibweise."),
+    (
+        "falls sie die seitenadresse manuell in ihren browser eingegeben haben,"
+        "kontrollieren sie bitte die korrekte schreibweise."
+    ),
     "aktuell keine einträge vorhanden",
     "sorry, there are no translated news-articles in this archive period",
 ]

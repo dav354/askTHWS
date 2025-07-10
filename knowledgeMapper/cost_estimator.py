@@ -1,18 +1,18 @@
+import concurrent.futures
+import logging
 import os
 import sys
-import logging
-import concurrent.futures
 from typing import List
 
 import tiktoken
-from pymongo import MongoClient
+from dotenv import load_dotenv
 from gridfs import GridFS
+from pymongo import MongoClient
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
-from dotenv import load_dotenv
 
-from .utils.data_processor import process_document_content, init_worker
+from .utils.data_processor import init_worker, process_document_content
 
 load_dotenv()
 
@@ -46,6 +46,7 @@ log = logging.getLogger(__name__)
 
 
 from .utils.db_connector import get_db_connection
+
 
 async def load_and_process_documents() -> List[str]:
     """

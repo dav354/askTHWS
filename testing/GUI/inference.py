@@ -1,16 +1,17 @@
 # inference.py
 import time
+
 import requests
 import torch
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
 # --- Config ---
-API_URL      = "http://localhost:11434/api/generate"
-COLLECTION   = "thws_data2_chunks"
-QDRANT_URL   = "http://localhost:6333"
-EMBED_MODEL  = "BAAI/bge-m3"
-TOP_K        = 3
+API_URL = "http://localhost:11434/api/generate"
+COLLECTION = "thws_data2_chunks"
+QDRANT_URL = "http://localhost:6333"
+EMBED_MODEL = "BAAI/bge-m3"
+TOP_K = 3
 
 # Device
 if torch.cuda.is_available():
@@ -22,7 +23,7 @@ else:
 
 # Init
 embedder = SentenceTransformer(EMBED_MODEL, device=device)
-client   = QdrantClient(url=QDRANT_URL)
+client = QdrantClient(url=QDRANT_URL)
 
 
 def get_context(question: str, top_k: int = TOP_K) -> str:

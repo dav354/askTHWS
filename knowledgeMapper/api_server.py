@@ -1,17 +1,10 @@
 # File: api_server.py
 # DEBUGGING VERSION: Hardcoding environment variables to test Neo4j connection.
 
-import time
-import torch
-import subprocess
 import atexit
 import os
 import signal
-import uvicorn
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
-from typing import Dict, Any
+import subprocess
 
 # ==============================================================================
 # TEMPORARY DEBUGGING STEP
@@ -19,16 +12,21 @@ from typing import Dict, Any
 # potential issues with the .env file.
 #
 import sys
-import os
+import time
+from contextlib import asynccontextmanager
+from typing import Any, Dict
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import torch
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 
-from knowledgeMapper.utils.local_models import embedding_func, OllamaLLM
-from knowledgeMapper.retrieval import prepare_and_execute_retrieval
-from knowledgeMapper import rag_manager
-from knowledgeMapper import config
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
+import config
+import rag_manager
+from retrieval import prepare_and_execute_retrieval
+from utils.local_models import OllamaLLM, embedding_func
 
 # --- Device Info ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -50,8 +48,10 @@ class Question(BaseModel):
 # --- Ollama Background Server Management ---
 print("🚓 Starting Ollama server in the background...")
 ollama_process = subprocess.Popen(
-    ["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    preexec_fn=os.setsid if os.name != 'nt' else None
+    ["ollama", "serve"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    preexec_fn=os.setsid if os.name != "nt" else None,
 )
 
 
@@ -61,7 +61,7 @@ def shutdown_ollama():
     print("Shutting down Ollama server...")
     if ollama_process:
         try:
-            if os.name == 'nt':
+            if os.name == "nt":
                 ollama_process.terminate()
             else:
                 os.killpg(os.getpgid(ollama_process.pid), signal.SIGTERM)
@@ -97,6 +97,7 @@ async def ask(data: Question, request: Request):
     except Exception as e:
         print(f"ERROR: An unexpected error occurred: {e}")
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal server error. Details: {e}")
 
@@ -110,7 +111,7 @@ def read_root():
 @app.get("/metadata")
 def metadata(request: Request):
     """
-Provides metadata about the running service."""
+    Provides metadata about the running service."""
 
     return {
         "embedding_model": config.EMBEDDING_MODEL_NAME,
@@ -123,4 +124,3 @@ Provides metadata about the running service."""
 if __name__ == "__main__":
     print("Starting FastAPI server...")
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=False)
-

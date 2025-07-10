@@ -4,9 +4,9 @@
 
 
 from datetime import datetime
-from typing import List, Dict, Any, Union
+from typing import Any, Dict, List, Union
 
-# In knowledgeMapper/retrieval.py
+import config
 
 RELIABLE_SYSTEM_PROMPT_TEMPLATE = """
 **SYSTEMBEFEHL:**
@@ -29,13 +29,13 @@ RELIABLE_SYSTEM_PROMPT_TEMPLATE = """
 {user_query}
 """
 
-from .utils.mongo_vector_store import MongoVectorStore
-from .utils.local_models import embedding_func, OllamaLLM
-from .rag_manager import get_rag_instance
+from rag_manager import get_rag_instance
+from utils.local_models import OllamaLLM, embedding_func
+from utils.mongo_vector_store import MongoVectorStore
 
 
 async def prepare_and_execute_retrieval(
-        user_query: str,
+    user_query: str,
 ) -> Dict[str, Union[str, List[Dict[str, Any]]]]:
     """
     Orchestrates a reliable RAG process that returns a separate clean answer
@@ -46,11 +46,13 @@ async def prepare_and_execute_retrieval(
     query_embedding = (await embedding_func([user_query]))[0]
 
     print("2. Retrieving relevant documents from vector store...")
-    retrieved_documents = vector_store.similarity_search(query_embedding, k=7)
+    # Add the 'await' keyword here
+    retrieved_documents = await vector_store.similarity_search(query_embedding, k=7)
 
+    # Now, 'retrieved_documents' will be a list, and you can iterate over it.
     context_data_str = ""
     for doc in retrieved_documents:
-        context_data_str += doc.get("page_content", "") + "\n\n"
+        context_data_str += doc.get("page_content", "")
 
     print("3. Generating answer...")
     llm = OllamaLLM()
@@ -58,12 +60,9 @@ async def prepare_and_execute_retrieval(
         context=context_data_str,
         user_query=user_query,
         current_date=datetime.now().strftime("%Y-%m-%d"),
-        location="Würzburg"
+        location="Würzburg",
     )
 
     citable_answer_text = await llm(prompt=final_system_prompt)
 
-    return {
-        "answer": citable_answer_text,
-        "sources": context_data_str
-    }
+    return {"answer": citable_answer_text, "sources": context_data_str}

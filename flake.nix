@@ -22,6 +22,8 @@
       devShells.default = pkgs.mkShell {
         packages = [
           pkgs.python311
+          pkgs.python311Packages.isort
+          pkgs.black
           pkgs.poetry
           pkgs.poetryPlugins.poetry-plugin-shell
           pkgs.stdenv.cc.cc.lib

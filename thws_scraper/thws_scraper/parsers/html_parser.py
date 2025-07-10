@@ -122,7 +122,9 @@ def extract_metadata(soup_full_page: BeautifulSoup) -> dict:
     return metadata
 
 
-def _extract_raw_content(soup: BeautifulSoup, response_text: str, url: str) -> Tuple[Optional[str], Optional[str], str]:
+def _extract_raw_content(
+    soup: BeautifulSoup, response_text: str, url: str
+) -> Tuple[Optional[str], Optional[str], str]:
     """
     Finds the main content by looking for common semantic tags like <main>
     or divs with id='content'. Falls back to the entire body.
@@ -168,15 +170,21 @@ def _finalize_title(current_title: Optional[str], soup: BeautifulSoup) -> str:
     return "Untitled Page"
 
 
-def parse_html(response: Response, soft_error_strings: List[str], tz: ZoneInfo) -> Optional[Tuple[List[RawPageItem], List[str]]]:
+def parse_html(
+    response: Response, soft_error_strings: List[str], tz: ZoneInfo
+) -> Optional[Tuple[List[RawPageItem], List[str]]]:
     """
     Main coordinator function for parsing HTML pages.
     """
-    module_logger.debug("Starting HTML parsing.", extra={"event_type": "html_parsing_started", "url": response.url})
+    module_logger.debug(
+        "Starting HTML parsing.", extra={"event_type": "html_parsing_started", "url": response.url}
+    )
     soup_full_page = BeautifulSoup(response.text, "lxml")
 
     # 1. Extract main content
-    raw_main_html, page_title, strategy_used = _extract_raw_content(soup_full_page, response.text, response.url)
+    raw_main_html, page_title, strategy_used = _extract_raw_content(
+        soup_full_page, response.text, response.url
+    )
 
     if not raw_main_html or not raw_main_html.strip():
         module_logger.error(
@@ -192,7 +200,9 @@ def parse_html(response: Response, soft_error_strings: List[str], tz: ZoneInfo) 
     cleaned_main_html = deobfuscate_text(cleaned_main_html)
 
     # 4. Validate the cleaned content
-    plain_text_from_cleaned_main = BeautifulSoup(cleaned_main_html, "lxml").get_text(strip=True).lower()
+    plain_text_from_cleaned_main = (
+        BeautifulSoup(cleaned_main_html, "lxml").get_text(strip=True).lower()
+    )
 
     if not plain_text_from_cleaned_main:
         details = {"strategy_used": strategy_used, "raw_html_before_cleaning": raw_main_html}
@@ -225,7 +235,9 @@ def parse_html(response: Response, soft_error_strings: List[str], tz: ZoneInfo) 
     final_title = _finalize_title(page_title, soup_full_page)
     lang = extract_lang_from_url(response.url)
     if lang == "unknown":
-        text_for_lang_detect = BeautifulSoup(cleaned_main_html, "lxml").get_text(separator=" ", strip=True)
+        text_for_lang_detect = BeautifulSoup(cleaned_main_html, "lxml").get_text(
+            separator=" ", strip=True
+        )
         if text_for_lang_detect:
             lang = detect_lang_from_content(text_for_lang_detect)
 
@@ -243,7 +255,11 @@ def parse_html(response: Response, soft_error_strings: List[str], tz: ZoneInfo) 
     )
 
     # 7. Extract embedded links
-    embedded_links = [urljoin(response.url, a_tag.get("href")) for a_tag in soup_full_page.find_all("a", href=True) if a_tag.get("href", "").lower().endswith((".pdf", ".ics"))]
+    embedded_links = [
+        urljoin(response.url, a_tag.get("href"))
+        for a_tag in soup_full_page.find_all("a", href=True)
+        if a_tag.get("href", "").lower().endswith((".pdf", ".ics"))
+    ]
 
     details = {
         "strategy_used": strategy_used,

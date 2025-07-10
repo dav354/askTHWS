@@ -31,13 +31,19 @@ def load_config():
 # --- Helper Functions ---
 def get_db_connection(config):
     """Establishes and returns a MongoDB database connection."""
-    mongo_uri = f"mongodb://{config['mongo_user']}:{config['mongo_pass']}@" f"{config['mongo_host']}:{config['mongo_port']}/" f"?authSource={config['mongo_auth_db']}"
+    mongo_uri = (
+        f"mongodb://{config['mongo_user']}:{config['mongo_pass']}@"
+        f"{config['mongo_host']}:{config['mongo_port']}/"
+        f"?authSource={config['mongo_auth_db']}"
+    )
     try:
         client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
         # The ismaster command is cheap and does not require auth, good for checking connection.
         client.admin.command("ismaster")
         db = client[config["mongo_db_name"]]
-        print(f"Successfully connected to MongoDB: {config['mongo_host']}:{config['mongo_port']}, DB: {config['mongo_db_name']}")  # noqa 501
+        print(
+            f"Successfully connected to MongoDB: {config['mongo_host']}:{config['mongo_port']}, DB: {config['mongo_db_name']}"
+        )  # noqa 501
         return db
     except pymongo_errors.ConnectionFailure as e:
         print(
@@ -126,7 +132,9 @@ def get_scraped_items_per_day(db, pages_coll_name, files_coll_name):
     daily_counts = Counter()
 
     pipeline = [
-        {"$match": {"date_scraped": {"$ne": None, "$exists": True}}},  # Ensure field exists and is not null
+        {
+            "$match": {"date_scraped": {"$ne": None, "$exists": True}}
+        },  # Ensure field exists and is not null
         {
             "$project": {
                 "dayScraped": {
@@ -205,7 +213,9 @@ def get_size_stats(db, pages_coll_name, files_coll_name):
         pages_total_result = list(
             db[pages_coll_name].aggregate(
                 [
-                    {"$match": {"text": {"$type": "string"}}},  # Ensure text is a string for $strLenCP
+                    {
+                        "$match": {"text": {"$type": "string"}}
+                    },  # Ensure text is a string for $strLenCP
                     {"$project": {"textSize": {"$strLenCP": "$text"}}},
                     {
                         "$group": {
@@ -225,7 +235,9 @@ def get_size_stats(db, pages_coll_name, files_coll_name):
         # Continue to print what might have been collected or defaults
 
     print("Overall Size:")
-    print(f"  Total Bytes (files coll.): {format_bytes(total_file_bytes)} ({total_file_count} items)")
+    print(
+        f"  Total Bytes (files coll.): {format_bytes(total_file_bytes)} ({total_file_count} items)"
+    )
     print(f"  Total Chars (pages.text):  {total_html_chars:,} chars ({total_html_count} items)")
     print("\nAverage Size per Type:")
     print(f"{'Type':<10} | {'Count':<10} | {'Avg Size':<17} | {'Collection':<12}")
@@ -233,9 +245,13 @@ def get_size_stats(db, pages_coll_name, files_coll_name):
 
     try:
         # Average size per type for files
-        for result in db[files_coll_name].aggregate([{"$group": {"_id": "$type", "avgSize": {"$avg": "$file_size"}, "count": {"$sum": 1}}}]):
+        for result in db[files_coll_name].aggregate(
+            [{"$group": {"_id": "$type", "avgSize": {"$avg": "$file_size"}, "count": {"$sum": 1}}}]
+        ):
             avg_size = int(result.get("avgSize", 0))
-            print(f"{result.get('_id', 'N/A'):<10} | {result.get('count', 0):<10} | {format_bytes(avg_size):<17} | {'files':<12}")  # noqa 501
+            print(
+                f"{result.get('_id', 'N/A'):<10} | {result.get('count', 0):<10} | {format_bytes(avg_size):<17} | {'files':<12}"
+            )  # noqa 501
 
         # Average char length per type for pages
         for result in db[pages_coll_name].aggregate(
@@ -252,7 +268,9 @@ def get_size_stats(db, pages_coll_name, files_coll_name):
             ]
         ):
             avg_chars = int(result.get("avgCharSize", 0))
-            print(f"{result.get('_id', 'N/A'):<10} | {result.get('count', 0):<10} | {f'{avg_chars:,} chars':<17} | {'pages (text)':<12}")  # noqa 501
+            print(
+                f"{result.get('_id', 'N/A'):<10} | {result.get('count', 0):<10} | {f'{avg_chars:,} chars':<17} | {'pages (text)':<12}"
+            )  # noqa 501
     except pymongo_errors.PyMongoError as e:
         print(f" Error querying average sizes: {e}", file=sys.stderr)
 
@@ -271,15 +289,21 @@ def get_date_updated_stats(db, pages_coll_name):
 
     try:
         # date_updated is primarily relevant for HTML pages
-        for doc in db[pages_coll_name].find({"type": "html"}, {"date_updated": 1, "date_scraped": 1}):
-            date_updated_val = doc.get("date_updated")  # This should be a datetime object if stored correctly by pymongo
+        for doc in db[pages_coll_name].find(
+            {"type": "html"}, {"date_updated": 1, "date_scraped": 1}
+        ):
+            date_updated_val = doc.get(
+                "date_updated"
+            )  # This should be a datetime object if stored correctly by pymongo
             date_scraped_val = doc.get("date_scraped")  # This too
 
             if date_updated_val:
                 # Ensure it's a datetime object
                 if isinstance(date_updated_val, str):
                     try:
-                        date_updated_val = datetime.fromisoformat(date_updated_val.replace("Z", "+00:00"))
+                        date_updated_val = datetime.fromisoformat(
+                            date_updated_val.replace("Z", "+00:00")
+                        )
                     except ValueError:
                         items_without_date_updated += 1  # Treat unparseable string as missing
                         continue
@@ -294,7 +318,9 @@ def get_date_updated_stats(db, pages_coll_name):
                 if date_scraped_val:
                     if isinstance(date_scraped_val, str):
                         try:
-                            date_scraped_val = datetime.fromisoformat(date_scraped_val.replace("Z", "+00:00"))
+                            date_scraped_val = datetime.fromisoformat(
+                                date_scraped_val.replace("Z", "+00:00")
+                            )
                         except ValueError:
                             continue  # Skip age calculation if scraped_date is bad
 
@@ -313,21 +339,29 @@ def get_date_updated_stats(db, pages_coll_name):
             return
 
         print(f"  Total HTML Pages Analyzed: {total_html_pages}")
-        perc_with_date = (items_with_date_updated / total_html_pages * 100) if total_html_pages > 0 else 0
+        perc_with_date = (
+            (items_with_date_updated / total_html_pages * 100) if total_html_pages > 0 else 0
+        )
         print(f"  Pages with 'date_updated': {items_with_date_updated} ({perc_with_date:.2f}%)")
         print(f"  Pages without 'date_updated' or unparseable: {items_without_date_updated}")
 
         if items_with_age_info > 0:
             avg_age_days = (total_age_seconds / items_with_age_info) / (24 * 3600)
-            print(f"  Average content age at scrape time: {avg_age_days:.2f} days (for pages with valid date_updated & date_scraped)")  # noqa 501
+            print(
+                f"  Average content age at scrape time: {avg_age_days:.2f} days (for pages with valid date_updated & date_scraped)"
+            )  # noqa 501
         else:
-            print("  Average content age: N/A (no valid date_updated entries or date_scraped for comparison)")  # noqa 501
+            print(
+                "  Average content age: N/A (no valid date_updated entries or date_scraped for comparison)"
+            )  # noqa 501
 
         if date_updated_years:
             print("\n  Distribution of 'date_updated' by Year:")
             print(f"    {'Year':<10} | {'Count':>7}")
             print(f"    {'-'*10}-+-{'-'*7}")
-            for year, count in sorted(date_updated_years.items(), key=lambda item: item[0], reverse=True):
+            for year, count in sorted(
+                date_updated_years.items(), key=lambda item: item[0], reverse=True
+            ):
                 print(f"    {year:<10} | {count:>7}")
 
     except pymongo_errors.PyMongoError as e:
@@ -379,7 +413,9 @@ def get_metadata_completeness_stats(db, pages_coll_name):
             print("\n  Distribution of 'og:type':")
             print(f"    {'OG Type':<25} | {'Count':>7}")
             print(f"    {'-'*25}-+-{'-'*7}")
-            for og_type, count in sorted(og_type_counts.items(), key=lambda item: (-item[1], item[0])):
+            for og_type, count in sorted(
+                og_type_counts.items(), key=lambda item: (-item[1], item[0])
+            ):
                 print(f"    {og_type:<25} | {count:>7}")
         else:
             print("  No OpenGraph types found.")
@@ -406,7 +442,11 @@ def get_text_length_distribution_stats(db, pages_coll_name):
 
     pipeline = [
         {"$match": {"type": "html", "text": {"$exists": True}}},  # Text field exists
-        {"$project": {"textLength": {"$cond": [{"$eq": ["$text", None]}, 0, {"$strLenCP": "$text"}]}}},  # Handle null text
+        {
+            "$project": {
+                "textLength": {"$cond": [{"$eq": ["$text", None]}, 0, {"$strLenCP": "$text"}]}
+            }
+        },  # Handle null text
         {
             "$bucket": {
                 "groupBy": "$textLength",
@@ -431,7 +471,9 @@ def get_text_length_distribution_stats(db, pages_coll_name):
         label_map = {b[0]: b[1] for b in buckets_def}
 
         # Sort results by the numeric _id (lower bound of bucket)
-        sorted_results = sorted(results, key=lambda x: x["_id"] if isinstance(x["_id"], (int, float)) else -1)
+        sorted_results = sorted(
+            results, key=lambda x: x["_id"] if isinstance(x["_id"], (int, float)) else -1
+        )
 
         for res_bucket in sorted_results:
             bucket_id = res_bucket["_id"]

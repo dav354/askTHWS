@@ -1,11 +1,9 @@
-from __future__ import annotations
 import asyncio
-import asyncio
+
+import config
 import httpx
 import torch
 from langchain_huggingface import HuggingFaceEmbeddings
-
-from .. import config
 
 # Semaphore to throttle concurrency of embedding requests (avoids OOM)
 _EMBED_SEMAPHORE = asyncio.Semaphore(config.EMBEDDING_CONCURRENCY)
@@ -64,7 +62,7 @@ embedding_func = embedding_wrapper_func
 class OllamaLLM:
     """
     Async wrapper around Ollama's local LLM endpoint (`/api/generate`).
-    Suitable for fast interaction with locally running models.
+    Uses httpx for non-blocking HTTP requests.
     """
 
     async def __call__(
@@ -80,31 +78,39 @@ class OllamaLLM:
 
         # Concatenate prompt components in proper order
         parts: list[str] = []
-        if history_messages:
-            parts.append("\n".join(m.get("content", "") for m in history_messages))
         if system_prompt:
             parts.append(system_prompt)
+        if history_messages:
+            # This part might need adjustment based on how you structure history
+            parts.append("\n".join(m.get("content", "") for m in history_messages))
         parts.append(prompt)
         full_prompt = "\n".join(parts)
 
         async with httpx.AsyncClient() as client:
-            r = await client.post(
-                f"{config.OLLAMA_HOST}/api/generate",
-                json={
-                    "model": config.OLLAMA_MODEL_NAME,
-                    "prompt": full_prompt,
-                    "stream": False,
-                    "options": {
-                        "num_ctx": config.OLLAMA_NUM_CTX,
-                        "num_predict": config.OLLAMA_NUM_PREDICT,
+            try:
+                response = await client.post(
+                    f"{config.OLLAMA_HOST}/api/generate",
+                    json={
+                        "model": config.OLLAMA_MODEL_NAME,
+                        "prompt": full_prompt,
+                        "stream": False,
+                        "options": {
+                            "num_ctx": config.OLLAMA_NUM_CTX,
+                            "num_predict": config.OLLAMA_NUM_PREDICT,
+                        },
                     },
-                },
-                timeout=10_000,
-            )
-            r.raise_for_status()
-            return r.json()["response"]
-
-
+                    timeout=120.0,  # Increased timeout for large models
+                )
+                response.raise_for_status()
+                return response.json().get("response", "Error: Empty response from model.")
+            except httpx.RequestError as exc:
+                print(f"An error occurred while requesting {exc.request.url!r}.")
+                return "Error: Could not connect to the language model."
+            except httpx.HTTPStatusError as exc:
+                print(
+                    f"Error response {exc.response.status_code} while requesting {exc.request.url!r}."
+                )
+                return f"Error: Received status {exc.response.status_code} from the model."
 
 
 __all__ = [

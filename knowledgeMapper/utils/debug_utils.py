@@ -1,13 +1,13 @@
-import sys
-import os
 import logging
-import torch
-from rich.panel import Panel
-from rich.text import Text
-from rich.console import Console, Group
-from rich.rule import Rule
+import os
+import sys
 
 import config
+import torch
+from rich.console import Console, Group
+from rich.panel import Panel
+from rich.rule import Rule
+from rich.text import Text
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +45,7 @@ def log_config_summary():
     system_info = get_system_info()
 
     pipeline_text = Text.from_markup(
-        f"""[bold]Language:[/bold] [yellow]{config.LANGUAGE}[/yellow]
-[bold]Storage Path:[/bold] [dim]{config.BASE_STORAGE_DIR}[/dim]"""
+        f"""[bold]Language:[/bold] [yellow]{config.LANGUAGE}[/yellow]"""
     )
 
     embedding_text = Text.from_markup(

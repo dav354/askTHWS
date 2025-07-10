@@ -1,11 +1,12 @@
 import time
+
 import pandas as pd
 import requests
 
 # --- Config ---
 CSV_PATH_OLD = "/Users/lelange/Uni/Projektarbeit/rag/testing/test_results.csv"
 CSV_PATH_NEW = "/Users/lelange/Uni/Projektarbeit/rag/testing/test_results_scored.csv"
-API_URL    = "http://localhost:11434/api/generate"
+API_URL = "http://localhost:11434/api/generate"
 EVAL_MODEL = "gemma3:27b"
 
 # --- Lade Ergebnisse ---
@@ -16,18 +17,18 @@ answer_cols = [c for c in df.columns if c.startswith("answer_")]
 
 # --- Initialisiere Score-Spalten ---
 for c in answer_cols:
-    model_id = c[len("answer_"):]              # z.B. "gemma7b"
+    model_id = c[len("answer_") :]  # z.B. "gemma7b"
     score_col = f"score_{model_id}"
     df[score_col] = pd.NA
 
 # --- Für jede Zeile & jedes Modell eine Bewertung abfragen ---
 for idx, row in df.iterrows():
-    question      = row["question"]
-    correct_ans   = row["correct_answer"]
+    question = row["question"]
+    correct_ans = row["correct_answer"]
     print(f"\n--- Bewerte Zeile {idx}: Frage „{question}“")
 
     for c in answer_cols:
-        model_id  = c[len("answer_"):]
+        model_id = c[len("answer_") :]
         score_col = f"score_{model_id}"
         model_ans = row[c]
 

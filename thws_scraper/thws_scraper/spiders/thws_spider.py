@@ -42,10 +42,16 @@ class ThwsSpider(CrawlSpider):
         crawler.signals.connect(spider.spider_closed, signal=signals.spider_closed)
 
         spider.ignored_url_patterns = crawler.settings.getlist("IGNORED_URL_PATTERNS_LIST", [])
-        spider.soft_error_strings = [s.lower() for s in crawler.settings.getlist("SOFT_ERROR_STRINGS", [])]
+        spider.soft_error_strings = [
+            s.lower() for s in crawler.settings.getlist("SOFT_ERROR_STRINGS", [])
+        ]
 
-        spider.logger.info(f"Loaded {len(spider.ignored_url_patterns)} ignored URL patterns from settings.")
-        spider.logger.info(f"Loaded {len(spider.soft_error_strings)} soft error strings from settings.")
+        spider.logger.info(
+            f"Loaded {len(spider.ignored_url_patterns)} ignored URL patterns from settings."
+        )
+        spider.logger.info(
+            f"Loaded {len(spider.soft_error_strings)} soft error strings from settings."
+        )
 
         return spider
 
@@ -113,7 +119,9 @@ class ThwsSpider(CrawlSpider):
                     )
             self.logger.info("Wrote stats table to CSV", extra={"csv_path": str(csv_path)})
         except IOError as e:
-            self.logger.error("Failed to write stats CSV", extra={"csv_path": str(csv_path), "error": str(e)})
+            self.logger.error(
+                "Failed to write stats CSV", extra={"csv_path": str(csv_path), "error": str(e)}
+            )
 
     def parse_item(self, response):
         domain = urlparse(response.url).netloc
@@ -121,8 +129,12 @@ class ThwsSpider(CrawlSpider):
         url_lower = response.url.lower()
         ctype = response.headers.get("Content-Type", b"").decode().split(";", 1)[0].lower()
 
-        if hasattr(self, "ignored_url_patterns") and any(pat in url_lower for pat in self.ignored_url_patterns):
-            matched_pattern = next((pat for pat in self.ignored_url_patterns if pat in url_lower), "Unknown pattern")
+        if hasattr(self, "ignored_url_patterns") and any(
+            pat in url_lower for pat in self.ignored_url_patterns
+        ):
+            matched_pattern = next(
+                (pat for pat in self.ignored_url_patterns if pat in url_lower), "Unknown pattern"
+            )
             self.logger.info(
                 "Skipped page: Ignored URL pattern",
                 extra={
@@ -170,7 +182,9 @@ class ThwsSpider(CrawlSpider):
             else:
                 current_soft_error_strings = self.soft_error_strings
 
-            parsed_output = parse_html(response, soft_error_strings=current_soft_error_strings, tz=self.tz)
+            parsed_output = parse_html(
+                response, soft_error_strings=current_soft_error_strings, tz=self.tz
+            )
             if parsed_output:
                 html_items, embedded_links = parsed_output
                 if html_items:

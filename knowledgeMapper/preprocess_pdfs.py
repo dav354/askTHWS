@@ -1,19 +1,18 @@
+import concurrent.futures
 import io
+import logging
 import os
 import re
 import time
-import logging
 from datetime import datetime
-from pymongo import MongoClient
-from gridfs import GridFS
+
 import fitz  # PyMuPDF
-from PIL import Image
 import pytesseract
+from gridfs import GridFS
+from PIL import Image
+from pymongo import MongoClient
 from pytesseract import Output
-import concurrent.futures
-
-from . import config
-
+from rich.logging import RichHandler
 from rich.progress import (
     BarColumn,
     Progress,
@@ -22,7 +21,8 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
-from rich.logging import RichHandler
+
+from . import config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,6 +40,7 @@ client, db, fs, extracted_collection = None, None, None, None
 
 
 from .db_connector import get_db_connection
+
 
 async def init_worker():
     """Initializer for each worker process."""

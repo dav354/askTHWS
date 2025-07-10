@@ -1,12 +1,10 @@
-import requests
+import os
 import re
 import time
-import os
-
 from datetime import datetime
-from typing import List, Dict, Any, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
-
+import requests
 
 MARKDOWN_FILE = "../docs/tests/fragen.md"
 API_URL = "http://localhost:8000/ask"
@@ -72,17 +70,13 @@ def write_header(f, metadata):
     f.write("---\n")
 
 
-def save_result(
-    f, question: str, duration: float, api_response: Dict[str, Any], status_code: int
-):
+def save_result(f, question: str, duration: float, api_response: Dict[str, Any], status_code: int):
     """Saves a single test result or an error to the file."""
     f.write(f"### Frage: {question}\n\n")
     f.write(f"**Status**: `{status_code}` | **Dauer**: `{duration:.2f}s`\n\n")
 
     if status_code == 200:
-        nested_data = api_response.get(
-            "answer", {}
-        )  # This is the dictionary from retrieval.py
+        nested_data = api_response.get("answer", {})  # This is the dictionary from retrieval.py
         raw_answer_text = nested_data.get(
             "answer", "No answer provided from RAG module (raw)."
         )  # This is now citable_answer_text
@@ -103,9 +97,7 @@ def save_result(
         # --- MODIFICATION END ---
     else:
         error_type = api_response.get("error", "Unknown Error")
-        error_detail = api_response.get(
-            "detail", "An unknown error occurred on the server side."
-        )
+        error_detail = api_response.get("detail", "An unknown error occurred on the server side.")
         f.write(f"**Fehler ({error_type}):**\n```json\n{error_detail}\n```\n")
 
     f.write("\n---\n\n")

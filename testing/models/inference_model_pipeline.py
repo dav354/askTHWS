@@ -1,28 +1,29 @@
-import torch
+import time
+
 import pandas as pd
 import requests
-import time
+import torch
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
 # --- Config ---
-CSV_INPUT     = "/Users/lelange/Uni/Projektarbeit/rag/testing/fragenkatalog_2904.csv"
-CSV_OUTPUT    = "/Users/lelange/Uni/Projektarbeit/rag/testing/test_results_scored.csv"
-API_URL     = "http://localhost:11434/api/generate"
-EVAL_MODEL  = "gemma3:27b"
-COLLECTION    = "thws_data2_chunks"
-QDRANT_URL    = "http://localhost:6333"
-EMBED_MODEL   = "BAAI/bge-m3"
+CSV_INPUT = "/Users/lelange/Uni/Projektarbeit/rag/testing/fragenkatalog_2904.csv"
+CSV_OUTPUT = "/Users/lelange/Uni/Projektarbeit/rag/testing/test_results_scored.csv"
+API_URL = "http://localhost:11434/api/generate"
+EVAL_MODEL = "gemma3:27b"
+COLLECTION = "thws_data2_chunks"
+QDRANT_URL = "http://localhost:6333"
+EMBED_MODEL = "BAAI/bge-m3"
 MODELS = {
-    "gemma:7b":       "answer_gemma7b",
-    "orca-mini:7b":   "answer_orca-mini7b",
+    "gemma:7b": "answer_gemma7b",
+    "orca-mini:7b": "answer_orca-mini7b",
     "mistral:latest": "answer_mistral_latest",
-    "phi4:latest":    "answer_phi4_latest",
-    "qwen2.5:14b":    "answer_qwen2_5_14b",
-    "orca-mini:13b":  "answer_orca-mini_13b",
-    "gemma3:27b":     "answer_gemma3_27b",
-    "deepseek-r1:32b":"answer_deepseek_r1_32b",
-    "qwq:latest":     "answer_qwq_latest",
+    "phi4:latest": "answer_phi4_latest",
+    "qwen2.5:14b": "answer_qwen2_5_14b",
+    "orca-mini:13b": "answer_orca-mini_13b",
+    "gemma3:27b": "answer_gemma3_27b",
+    "deepseek-r1:32b": "answer_deepseek_r1_32b",
+    "qwq:latest": "answer_qwq_latest",
 }
 TOP_K = 3
 
@@ -37,7 +38,7 @@ print(f"🔥 Using device: {device}")
 
 # --- Init Embedder & Qdrant-Client ---
 embedder = SentenceTransformer(EMBED_MODEL, device=device)
-client   = QdrantClient(url=QDRANT_URL)
+client = QdrantClient(url=QDRANT_URL)
 
 df = pd.read_csv(CSV_INPUT)
 # --- Filtere nur gültige Fragen mit existierender Frage und Antwort ---
@@ -48,10 +49,10 @@ df = df[df["Answer"].astype(str).str.strip() != ""]
 results = []
 
 for _, row in df.iterrows():
-    question      = row["Question"]
-    correct_ans   = row.get("Answer", "")
+    question = row["Question"]
+    correct_ans = row.get("Answer", "")
     print(f"\n--- Verarbeite Frage ID {row['Id']}")
-    
+
     # 1) Embed Query
     q_vec = embedder.encode(question, device=device)
     # 2) Suche in Qdrant
@@ -61,7 +62,7 @@ for _, row in df.iterrows():
         limit=TOP_K,
         with_payload=True,
     )
-    
+
     # Dedupliziere nach Quelle
     unique = {}
     for hit in hits:
@@ -70,7 +71,7 @@ for _, row in df.iterrows():
             unique[src] = hit
     context = "\n\n".join(h.payload["text"] for h in unique.values())
     row_source = row.get("URL / Dokument", "")
-    
+
     # Bereite Ergebnis-Dict vor
     record = {
         "question": question,
@@ -111,7 +112,7 @@ Antwort:
 
     # Bewertung der Modellantworten
     for model_name, col_name in MODELS.items():
-        model_id  = col_name[len("answer_"):]
+        model_id = col_name[len("answer_") :]
         score_col = f"score_{model_id}"
         model_ans = record[col_name]
 
@@ -135,7 +136,7 @@ Modell-Antwort:
 {model_ans}
 """
         resp = requests.post(API_URL, json={"model": EVAL_MODEL, "prompt": prompt, "stream": False})
-        out  = resp.json().get("response", "").strip()
+        out = resp.json().get("response", "").strip()
         try:
             score = float(out)
         except ValueError:

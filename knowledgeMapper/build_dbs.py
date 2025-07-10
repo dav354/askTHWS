@@ -2,25 +2,30 @@ import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+import argparse
 import asyncio
 import logging
-import argparse
-from pathlib import Path
 from collections import defaultdict
-from typing import List, Dict
+from pathlib import Path
+from typing import Dict, List
 
-from rich.logging import RichHandler
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from .utils.progress_bar import EstimatedTimeRemainingColumn
+import config
 from langchain.docstore.document import Document
-
-from . import config
-from .utils.chunker import create_structured_chunks
-from .utils.subdomain_utils import get_sanitized_subdomain
-from .utils.local_models import embedding_func
-from .utils.debug_utils import log_config_summary
-from .utils.mongo_loader import load_documents_from_mongo
-from .utils.mongo_vector_store import MongoVectorStore
+from rich.logging import RichHandler
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from utils.chunker import create_structured_chunks
+from utils.debug_utils import log_config_summary
+from utils.local_models import embedding_func
+from utils.mongo_loader import load_documents_from_mongo
+from utils.mongo_vector_store import MongoVectorStore
+from utils.progress_bar import EstimatedTimeRemainingColumn
+from utils.subdomain_utils import get_sanitized_subdomain
 
 logging.basicConfig(
     level="INFO",
@@ -31,9 +36,6 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-
-
-
 async def build_vector_store(docs_to_process: List[Document]):
     """Builds a vector store from the processed documents."""
     log.info(f"--- Building Vector Store from {len(docs_to_process)} documents ---")
@@ -41,7 +43,7 @@ async def build_vector_store(docs_to_process: List[Document]):
         vector_store = MongoVectorStore(
             db_name=config.MONGO_DB_NAME,
             collection_name=config.MONGO_VECTOR_COLLECTION,
-            vector_index_name=config.MONGO_VECTOR_INDEX_NAME
+            vector_index_name=config.MONGO_VECTOR_INDEX_NAME,
         )
         await vector_store.ainit()
         # Ensure the collection exists before creating the index
@@ -49,7 +51,9 @@ async def build_vector_store(docs_to_process: List[Document]):
             await vector_store.db.create_collection(config.MONGO_VECTOR_COLLECTION)
             log.info(f"Collection '{config.MONGO_VECTOR_COLLECTION}' created.")
         except Exception as e:
-            log.info(f"Collection '{config.MONGO_VECTOR_COLLECTION}' already exists or could not be created: {e}")
+            log.info(
+                f"Collection '{config.MONGO_VECTOR_COLLECTION}' already exists or could not be created: {e}"
+            )
 
         await vector_store.create_vector_index()
 
@@ -75,7 +79,7 @@ async def build_vector_store(docs_to_process: List[Document]):
                 document_to_insert = {
                     "page_content": chunk.page_content,
                     "metadata": chunk.metadata,
-                    "vector": embedding
+                    "vector": embedding,
                 }
                 await vector_store.collection.insert_one(document_to_insert)
                 progress.update(task, advance=1)
@@ -88,7 +92,7 @@ async def build_vector_store(docs_to_process: List[Document]):
         log.exception(f"❌ FAILED to build vector store: {e}")
         return False
     finally:
-        if 'vector_store' in locals() and vector_store:
+        if "vector_store" in locals() and vector_store:
             await vector_store.close()
 
 
@@ -99,7 +103,8 @@ async def main(args):
     """
     log_config_summary()
 
-    all_documents, _ = load_documents_from_mongo()
+    all_documents, _ = await load_documents_from_mongo()
+
     if not all_documents:
         log.warning("No documents loaded from MongoDB. Aborting.")
         return
@@ -141,9 +146,7 @@ async def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Build a RAG Vector Store from MongoDB content."
-    )
+    parser = argparse.ArgumentParser(description="Build a RAG Vector Store from MongoDB content.")
     parser.add_argument(
         "--subdomain",
         action="append",

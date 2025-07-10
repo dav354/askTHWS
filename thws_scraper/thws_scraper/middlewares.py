@@ -30,7 +30,11 @@ class ThwsScraperSpiderMiddleware:
                 "middleware": self.__class__.__name__,
                 "error": str(exception),
                 "exception_type": type(exception).__name__,
-                "traceback": (logging.Formatter().formatException(logging.sys.exc_info()) if logging.sys else str(exception)),
+                "traceback": (
+                    logging.Formatter().formatException(logging.sys.exc_info())
+                    if logging.sys
+                    else str(exception)
+                ),
             },
         )
         pass

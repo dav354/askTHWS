@@ -1,10 +1,11 @@
 from typing import Dict
 
 import config
-from .utils.local_models import embedding_func, OllamaLLM
-from .utils.mongo_vector_store import MongoVectorStore
+from utils.local_models import OllamaLLM, embedding_func
+from utils.mongo_vector_store import MongoVectorStore
 
 _vector_store_instance: MongoVectorStore | None = None
+
 
 async def get_rag_instance() -> MongoVectorStore:
     """
@@ -17,7 +18,7 @@ async def get_rag_instance() -> MongoVectorStore:
     _vector_store_instance = MongoVectorStore(
         db_name=config.MONGO_DB_NAME,
         collection_name=config.MONGO_VECTOR_COLLECTION,
-        vector_index_name=config.MONGO_VECTOR_INDEX_NAME
+        vector_index_name=config.MONGO_VECTOR_INDEX_NAME,
     )
     await _vector_store_instance.ainit()
     print("[*] MongoDB Vector Store instance loaded successfully.")

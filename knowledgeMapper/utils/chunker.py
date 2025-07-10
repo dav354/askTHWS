@@ -1,6 +1,10 @@
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
-from langchain.docstore.document import Document
 from typing import List
+
+from langchain.docstore.document import Document
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 
 
 def create_structured_chunks(documents: List[Document]) -> List[Document]:
