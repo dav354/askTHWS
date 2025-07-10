@@ -4,17 +4,9 @@ import logging
 import concurrent.futures
 from typing import List, Dict, Any, Tuple
 
-from pymongo import MongoClient
-from gridfs import GridFS
-from langchain.docstore.document import Document
+from .db_connector import get_db_connection
 
-import config
-from .data_processor import process_document_content, init_worker
-
-log = logging.getLogger(__name__)
-
-
-def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
+async def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
     """
     Connects to MongoDB and performs an EFFICIENT HYBRID data load.
 
@@ -23,11 +15,7 @@ def load_documents_from_mongo() -> Tuple[List[Document], Dict[str, int]]:
         - A list of all processed Document objects.
         - A dictionary with statistics about the loaded documents.
     """
-    client = MongoClient(
-        f"mongodb://{config.MONGO_USER}:{config.MONGO_PASS}@{config.MONGO_HOST}:{config.MONGO_PORT}/{config.MONGO_DB_NAME}?authSource=admin"
-    )
-    db = client[config.MONGO_DB_NAME]
-    fs = GridFS(db)
+    client, db, fs = await get_db_connection()
     final_docs = []
     stats = {"from_cache": 0, "live_processed": 0}
 

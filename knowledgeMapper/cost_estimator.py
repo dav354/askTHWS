@@ -12,7 +12,7 @@ from rich.table import Table
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from utils.data_processor import process_document_content, init_worker
+from .utils.data_processor import process_document_content, init_worker
 
 load_dotenv()
 
@@ -45,16 +45,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 log = logging.getLogger(__name__)
 
 
-def load_and_process_documents() -> List[str]:
+from .utils.db_connector import get_db_connection
+
+async def load_and_process_documents() -> List[str]:
     """
     Connects to MongoDB, loads all documents, and processes them into plain text,
     just like the main pipeline.
     """
     log.info("Connecting to MongoDB...")
-    mongo_uri = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}?authSource=admin"
-    client = MongoClient(mongo_uri)
-    db = client.get_database()
-    fs = GridFS(db)
+    client, db, fs = await get_db_connection()
     log.info("Successfully connected to MongoDB.")
 
     log.info("Loading document references...")
@@ -137,12 +136,12 @@ def calculate_costs(total_tokens: int):
     )
 
 
-def main():
+async def main():
     """Main function of the script."""
     log.info("Starting the Cost Estimation Tool...")
 
     # 1. Load and process documents
-    all_texts = load_and_process_documents()
+    all_texts = await load_and_process_documents()
     if not all_texts:
         log.warning("No text content found to process.")
         return
@@ -165,4 +164,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

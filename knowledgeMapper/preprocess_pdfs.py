@@ -12,7 +12,7 @@ import pytesseract
 from pytesseract import Output
 import concurrent.futures
 
-import config
+from . import config
 
 from rich.progress import (
     BarColumn,
@@ -39,19 +39,16 @@ MIN_TEXT_LENGTH_FOR_OCR_FALLBACK = 250
 client, db, fs, extracted_collection = None, None, None, None
 
 
-def init_worker(db_config: dict):
+from .db_connector import get_db_connection
+
+async def init_worker():
     """Initializer for each worker process."""
     global client, db, fs, extracted_collection
     worker_pid = os.getpid()
     log.debug(f"Initializing worker process with PID: {worker_pid}...")
     try:
-        client = MongoClient(
-            f"mongodb://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['db_name']}?authSource=admin"
-        )
-        client.admin.command("ping")
-        db = client[db_config["db_name"]]
-        fs = GridFS(db)
-        extracted_collection = db[db_config["extracted_collection"]]
+        client, db, fs = await get_db_connection()
+        extracted_collection = db[config.MONGO_EXTRACTED_CONTENT_COLLECTION]
         log.debug(f"Worker {worker_pid} successfully connected to MongoDB.")
     except Exception:
         log.error(f"Worker {worker_pid} failed to connect to MongoDB.", exc_info=True)
@@ -176,13 +173,10 @@ def process_and_insert_single_document(doc: dict) -> dict:
     return {"status": "fail", "ocr_used": False}
 
 
-def main():
+async def main():
     log.info("Starting Hybrid Content Extraction...")
 
-    main_client = MongoClient(
-        f"mongodb://{config.MONGO_USER}:{config.MONGO_PASS}@{config.MONGO_HOST}:{config.MONGO_PORT}/{config.MONGO_DB_NAME}?authSource=admin"
-    )
-    main_db = main_client[config.MONGO_DB_NAME]
+    main_client, main_db, _ = await get_db_connection()
     source_collection = main_db[config.MONGO_FILES_COLLECTION]
     main_extracted_collection = main_db[config.MONGO_EXTRACTED_CONTENT_COLLECTION]
 

@@ -28,12 +28,12 @@ plotly = "^6.1.2"
 pyvis = "^0.3.2"
 matplotlib = "^3.10.3"
 seaborn = "^0.13.2"
-lightrag-hku = {extras = ["api"], version = "^1.3.8"}
 rich = "^14.0.0"
 markdownify = "^1.1.0"
 icalendar = "^6.3.1"
 tiktoken = "^0.9.0"
 pytesseract = "^0.3.13"
+motor = "^3.7.1"
 
 [[tool.poetry.source]]
 name = "pytorch-cu121"

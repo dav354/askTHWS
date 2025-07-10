@@ -1,0 +1,41 @@
+services:
+  mongo:
+    image: mongodb/mongodb-atlas-local:latest
+    container_name: mongodb-atlas-local
+    ports:
+      - "27017:27017"
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: scraper
+      MONGODB_INITDB_ROOT_PASSWORD: password
+      MONGODB_INITDB_DATABASE: askthws_scraper
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb-atlas-local
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+      ME_CONFIG_MONGODB_ADMINUSERNAME: scraper
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: password
+
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:
+  mongodb_config:

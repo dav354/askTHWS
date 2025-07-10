@@ -1,28 +1,20 @@
 from __future__ import annotations
 import asyncio
-import requests
+import asyncio
+import httpx
 import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from knowledgeMapper.config import (
-    EMBEDDING_MODEL_NAME,
-    EMBEDDING_DEVICE,
-    EMBEDDING_BATCH_SIZE,
-    EMBEDDING_CONCURRENCY,
-    OLLAMA_MODEL_NAME,
-    OLLAMA_HOST,
-    OLLAMA_NUM_CTX,
-    OLLAMA_NUM_PREDICT,
-)
+from .. import config
 
 # Semaphore to throttle concurrency of embedding requests (avoids OOM)
-_EMBED_SEMAPHORE = asyncio.Semaphore(EMBEDDING_CONCURRENCY)
+_EMBED_SEMAPHORE = asyncio.Semaphore(config.EMBEDDING_CONCURRENCY)
 
 # HuggingFace embeddings wrapper using LangChain's integration
 _hf = HuggingFaceEmbeddings(
-    model_name=EMBEDDING_MODEL_NAME,
+    model_name=config.EMBEDDING_MODEL_NAME,
     encode_kwargs={"normalize_embeddings": True},  # Ensure unit-length vectors
-    model_kwargs={"device": EMBEDDING_DEVICE},  # e.g., "cuda" or "cpu"
+    model_kwargs={"device": config.EMBEDDING_DEVICE},  # e.g., "cuda" or "cpu"
 )
 
 # Calculate and expose the dimensionality of the embedding space
@@ -47,8 +39,8 @@ class AsyncEmbedder:
     def _embed_chunked(self, texts: list[str]) -> list[list[float]]:
         # Split into batches and embed each chunk
         vecs: list[list[float]] = []
-        for i in range(0, len(texts), EMBEDDING_BATCH_SIZE):
-            batch = texts[i : i + EMBEDDING_BATCH_SIZE]
+        for i in range(0, len(texts), config.EMBEDDING_BATCH_SIZE):
+            batch = texts[i : i + config.EMBEDDING_BATCH_SIZE]
             with torch.no_grad():  # No gradients needed for inference
                 vecs.extend(_hf.embed_documents(batch))
             torch.cuda.empty_cache()  # Free VRAM after each batch (helps with OOM)
@@ -95,17 +87,16 @@ class OllamaLLM:
         parts.append(prompt)
         full_prompt = "\n".join(parts)
 
-        # Actual HTTP call is made in a background thread to avoid blocking
-        def _call() -> str:
-            r = requests.post(
-                f"{OLLAMA_HOST}/api/generate",
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                f"{config.OLLAMA_HOST}/api/generate",
                 json={
-                    "model": OLLAMA_MODEL_NAME,
+                    "model": config.OLLAMA_MODEL_NAME,
                     "prompt": full_prompt,
                     "stream": False,
                     "options": {
-                        "num_ctx": OLLAMA_NUM_CTX,
-                        "num_predict": OLLAMA_NUM_PREDICT,
+                        "num_ctx": config.OLLAMA_NUM_CTX,
+                        "num_predict": config.OLLAMA_NUM_PREDICT,
                     },
                 },
                 timeout=10_000,
@@ -113,20 +104,12 @@ class OllamaLLM:
             r.raise_for_status()
             return r.json()["response"]
 
-        return await asyncio.to_thread(_call)
 
-
-class HFEmbedFunc:
-    """Legacy alias to maintain compatibility with older imports."""
-
-    def __new__(cls, *_, **__):
-        return embedding_func
 
 
 __all__ = [
     "embedding_func",
     "OllamaLLM",
-    "HFEmbedFunc",
     "EMBEDDING_MODEL_NAME",
     "OLLAMA_MODEL_NAME",
 ]

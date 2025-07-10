@@ -23,47 +23,16 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- Custom Module Imports (adapted for new local_models.py) ---
-from knowledgeMapper.utils.local_models import (
-    HFEmbedFunc,
-    OllamaLLM,
-    EMBEDDING_MODEL_NAME,
-    OLLAMA_MODEL_NAME,
+from knowledgeMapper.utils.local_models import embedding_func, OllamaLLM
+from knowledgeMapper.retrieval import prepare_and_execute_retrieval
+from knowledgeMapper import rag_manager
+from knowledgeMapper import config
 
-)
-# Import the updated retrieval logic
-from knowledgeMapper.retrieval import (prepare_and_execute_retrieval, MODE)
 
-# --- LightRAG Library Imports ---
-import lightrag
-from lightrag import LightRAG
-from lightrag.kg.shared_storage import initialize_pipeline_status
 
 # --- Device Info ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"🔥 Using device: {device}")
-
-
-# --- Lifespan to load all models and initialize LightRAG ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Handles startup events for the FastAPI application."""
-    print("🚀 Server starting up...")
-    print("🧠 Initializing LightRAG framework...")
-    app.state.rag = LightRAG(
-        working_dir="../RAG_STORAGE",
-        embedding_func=HFEmbedFunc(),
-        llm_model_func=OllamaLLM(),
-        enable_llm_cache=False,
-    )
-
-    await app.state.rag.initialize_storages()
-    print("✅ LightRAG storages initialized.")
-    await initialize_pipeline_status()
-    print("✅ LightRAG pipeline status initialized.")
-    print("✅ Server is ready to accept requests.")
-    yield
-    print("🔌 Server shutting down.")
 
 
 # --- FastAPI App Initialization ---
@@ -71,7 +40,6 @@ app = FastAPI(
     title="THWS KG-RAG API (Final Architecture)",
     description="Ein API-Server, der die stabile `aquery`-Methode mit einem intelligenten Prompt für maximale Antwortqualität und Transparenz verwendet.",
     version="18.0.3_debug",  # Version bumped for debug
-    lifespan=lifespan
 )
 
 
@@ -113,14 +81,9 @@ async def ask(data: Question, request: Request):
     print(f"\n--- New Request ---")
     print(f"Received German query: '{data.query}'")
     try:
-        rag: LightRAG = request.app.state.rag
-        # Instantiate the LLM for this request. It's a lightweight wrapper.
-        llm_instance = OllamaLLM()
-
         # Delegate the entire logic to the retrieval function
         final_answer = await prepare_and_execute_retrieval(
             user_query=data.query,
-            rag_instance=rag,
         )
 
         duration = round(time.time() - start_time, 2)
@@ -129,7 +92,6 @@ async def ask(data: Question, request: Request):
         return {
             "question": data.query,
             "answer": final_answer,
-            "mode": "controlled_aquery_pipeline",
             "duration_seconds": duration,
         }
     except Exception as e:
@@ -147,15 +109,13 @@ def read_root():
 
 @app.get("/metadata")
 def metadata(request: Request):
-    """Provides metadata about the running service."""
-    rag: LightRAG = request.app.state.rag
-    retriever_info = rag.vector_storage
+    """
+Provides metadata about the running service."""
 
     return {
-        "embedding_model": EMBEDDING_MODEL_NAME,
-        "llm_model": OLLAMA_MODEL_NAME,
+        "embedding_model": config.EMBEDDING_MODEL_NAME,
+        "llm_model": config.OLLAMA_MODEL_NAME,
         "device": device,
-        "retrieval_mode": MODE,
     }
 
 
@@ -163,3 +123,4 @@ def metadata(request: Request):
 if __name__ == "__main__":
     print("Starting FastAPI server...")
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=False)
+

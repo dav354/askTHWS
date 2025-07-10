@@ -10,17 +10,17 @@ from collections import defaultdict
 from typing import List, Dict
 
 from rich.logging import RichHandler
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from .utils.progress_bar import EstimatedTimeRemainingColumn
 from langchain.docstore.document import Document
-from lightrag.kg.shared_storage import initialize_pipeline_status
-from lightrag.lightrag import LightRAG
 
-import config
-from utils.chunker import create_structured_chunks
-from utils.subdomain_utils import get_sanitized_subdomain
-from utils.local_models import embedding_func, OllamaLLM
-from utils.debug_utils import log_config_summary
-from utils.mongo_loader import load_documents_from_mongo
-from utils.progress_bar import get_kg_progress_bar, monitor_progress
+from . import config
+from .utils.chunker import create_structured_chunks
+from .utils.subdomain_utils import get_sanitized_subdomain
+from .utils.local_models import embedding_func
+from .utils.debug_utils import log_config_summary
+from .utils.mongo_loader import load_documents_from_mongo
+from .utils.mongo_vector_store import MongoVectorStore
 
 logging.basicConfig(
     level="INFO",
@@ -31,63 +31,71 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-async def init_rag_instance(storage_dir: str) -> LightRAG:
-    """Creates and initializes a LightRAG instance for building a Knowledge Graph."""
-    rag = LightRAG(
-        working_dir=storage_dir,
-        embedding_func=embedding_func,
-        llm_model_func=OllamaLLM(),
-        entity_extract_max_gleaning=config.ENTITY_EXTRACT_MAX_GLEANING,
-    )
-    await rag.initialize_storages()
-    await initialize_pipeline_status()
-    return rag
 
 
-async def build_knowledge_graph(docs_to_process: List[Document]):
-    """Builds a single knowledge graph with the enhanced progress bar."""
-    log.info(f"--- Building Knowledge Graph from {len(docs_to_process)} documents ---")
-    rag = None
+
+async def build_vector_store(docs_to_process: List[Document]):
+    """Builds a vector store from the processed documents."""
+    log.info(f"--- Building Vector Store from {len(docs_to_process)} documents ---")
     try:
-        storage_path = config.BASE_STORAGE_DIR.resolve()
-        storage_path.mkdir(parents=True, exist_ok=True)
-        rag = await init_rag_instance(storage_path.as_posix())
+        vector_store = MongoVectorStore(
+            db_name=config.MONGO_DB_NAME,
+            collection_name=config.MONGO_VECTOR_COLLECTION,
+            vector_index_name=config.MONGO_VECTOR_INDEX_NAME
+        )
+        await vector_store.ainit()
+        # Ensure the collection exists before creating the index
+        try:
+            await vector_store.db.create_collection(config.MONGO_VECTOR_COLLECTION)
+            log.info(f"Collection '{config.MONGO_VECTOR_COLLECTION}' created.")
+        except Exception as e:
+            log.info(f"Collection '{config.MONGO_VECTOR_COLLECTION}' already exists or could not be created: {e}")
+
+        await vector_store.create_vector_index()
 
         log.info("Applying structured chunking...")
         structured_chunks = create_structured_chunks(docs_to_process)
         chunk_count = len(structured_chunks)
         log.info(f"Split documents into {chunk_count} structured chunks.")
 
-        texts = [chunk.page_content for chunk in structured_chunks]
-        paths = [chunk.metadata.get("url", "source_unknown") for chunk in structured_chunks]
-        await rag.apipeline_enqueue_documents(texts, file_paths=paths)
+        log.info("Generating embeddings and adding to vector store...")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[green]Processing chunks..."),
+            BarColumn(),
+            TextColumn("[bold blue]{task.completed}/{task.total} chunks"),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            TextColumn("•"),
+            EstimatedTimeRemainingColumn(),
+        ) as progress:
+            task = progress.add_task("Embedding", total=chunk_count)
+            for i, chunk in enumerate(structured_chunks):
+                embedding = (await embedding_func([chunk.page_content]))[0]
+                document_to_insert = {
+                    "page_content": chunk.page_content,
+                    "metadata": chunk.metadata,
+                    "vector": embedding
+                }
+                await vector_store.collection.insert_one(document_to_insert)
+                progress.update(task, advance=1)
 
-        with get_kg_progress_bar() as progress:
-            task_id = progress.add_task("[green]Building KG", total=chunk_count)
-            status_file_path = Path(rag.working_dir) / "kv_store_doc_status.json"
+        log.info(f"Added {chunk_count} documents to the vector store.")
 
-            main_processing_task = asyncio.create_task(rag.apipeline_process_enqueue_documents())
-            monitor_task = asyncio.create_task(
-                monitor_progress(progress, task_id, status_file_path, main_processing_task)
-            )
-
-            await asyncio.gather(main_processing_task, monitor_task)
-            progress.update(task_id, completed=chunk_count)
-
-        log.info("[bold green]✅ Unified Knowledge Graph built successfully.[/bold green]")
+        log.info("[bold green]✅ Vector Store built successfully.[/bold green]")
         return True
     except Exception as e:
-        log.exception(f"❌ FAILED to build knowledge graph: {e}")
+        log.exception(f"❌ FAILED to build vector store: {e}")
         return False
     finally:
-        if rag:
-            await rag.finalize_storages()
+        if 'vector_store' in locals() and vector_store:
+            await vector_store.close()
 
 
 async def main(args):
     """
     Main entrypoint: Loads documents, filters them, displays the stats for the
-    filtered set, and builds the KG.
+    filtered set, and builds the vector store.
     """
     log_config_summary()
 
@@ -124,7 +132,7 @@ async def main(args):
 
     log.info(f"Total to Process: {len(docs_to_process)} documents")
 
-    success = await build_knowledge_graph(docs_to_process)
+    success = await build_vector_store(docs_to_process)
 
     if success:
         log.info("✅ Build process completed successfully.")
@@ -134,12 +142,12 @@ async def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Build a RAG Knowledge Graph from MongoDB content."
+        description="Build a RAG Vector Store from MongoDB content."
     )
     parser.add_argument(
         "--subdomain",
         action="append",
-        help="Build KG using only documents from one or more specific subdomains.",
+        help="Build vector store using only documents from one or more specific subdomains.",
     )
     args = parser.parse_args()
     asyncio.run(main(args))
